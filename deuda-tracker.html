@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Deuda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #f5f3ee;
+    --surface:      #ffffff;
+    --surface2:     #faf9f6;
+    --border:       #e8e3d8;
+    --accent:       #2a6496;
+    --accent-light: #e8f1f8;
+    --accent2:      #c0884f;
+    --text:         #1a1a1a;
+    --text-muted:   #7a7468;
+    --success:      #2e7d52;
+    --danger:       #c0392b;
+    --danger-light: #fdf0ee;
+    --shadow:       0 2px 16px rgba(0,0,0,0.07);
+    --shadow-lg:    0 8px 32px rgba(0,0,0,0.12);
+    --radius:       14px;
+    --radius-sm:    8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ════ LOGIN ════ */
+  #loginScreen {
+    position: fixed; inset: 0;
+    background: linear-gradient(145deg, #e8f1f8 0%, #f5f3ee 50%, #fdf3e7 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; padding: 24px;
+  }
+
+  #loginScreen.hidden { display: none; }
+
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px 36px;
+    width: min(400px, 100%);
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(30px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  @keyframes shake {
+    0%,100% { transform:translateX(0); }
+    20%     { transform:translateX(-8px); }
+    40%     { transform:translateX(8px); }
+    60%     { transform:translateX(-5px); }
+    80%     { transform:translateX(5px); }
+  }
+
+  .login-icon {
+    width:56px; height:56px;
+    background:var(--accent-light);
+    border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem; margin:0 auto 20px;
+  }
+
+  .login-box h1 {
+    font-family:'Playfair Display',serif;
+    font-size:1.5rem; text-align:center; margin-bottom:4px;
+  }
+
+  .login-box .subtitle {
+    text-align:center; font-size:0.82rem;
+    color:var(--text-muted); margin-bottom:28px;
+  }
+
+  .login-field { display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+
+  .login-field label {
+    font-size:0.75rem; font-weight:600;
+    text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted);
+  }
+
+  .login-field input {
+    font-family:'DM Sans',sans-serif; font-size:0.95rem;
+    border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    padding:11px 14px; background:var(--surface2); color:var(--text);
+    outline:none; transition:border-color 0.2s, background 0.2s; width:100%;
+  }
+
+  .login-field input:focus { border-color:var(--accent); background:#fff; }
+
+  .login-error {
+    background:var(--danger-light); border:1px solid #f5c6c2;
+    border-radius:var(--radius-sm); color:var(--danger);
+    font-size:0.82rem; padding:9px 13px; margin-bottom:14px;
+    display:none; text-align:center;
+  }
+  .login-error.show { display:block; }
+
+  .btn-login {
+    width:100%; background:var(--accent); color:#fff;
+    border:none; border-radius:var(--radius-sm);
+    padding:13px; font-family:'DM Sans',sans-serif;
+    font-size:0.95rem; font-weight:600;
+    cursor:pointer; transition:background 0.2s, transform 0.1s; margin-top:4px;
+  }
+  .btn-login:hover  { background:#235480; }
+  .btn-login:active { transform:scale(0.98); }
+
+  /* ════ APP ════ */
+  #appScreen { display:none; padding-bottom:60px; }
+  #appScreen.visible { display:block; }
+
+  header {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:18px 24px 16px; display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .header-title h2 {
+    font-family:'Playfair Display',serif; font-size:1.25rem; letter-spacing:-0.3px;
+  }
+  .header-title p { font-size:0.73rem; color:var(--text-muted); margin-top:2px; }
+
+  .btn-cerrar {
+    background:none; border:1.5px solid var(--border); border-radius:50px;
+    padding:6px 15px; font-family:'DM Sans',sans-serif; font-size:0.78rem;
+    color:var(--text-muted); cursor:pointer;
+    display:flex; align-items:center; gap:6px; transition:all 0.2s;
+  }
+  .btn-cerrar:hover { border-color:var(--danger); color:var(--danger); }
+
+  main { max-width:720px; margin:0 auto; padding:26px 16px 0; }
+
+  /* ── Resumen ── */
+  .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);
+  }
+  .card-wide { grid-column:1/-1; }
+
+  .card-label {
+    font-size:0.7rem; font-weight:600; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;
+  }
+  .card-value { font-family:'Playfair Display',serif; font-size:1.7rem; font-weight:700; line-height:1; }
+  .card-value.saldo   { color:var(--accent); }
+  .card-value.capital { color:var(--success); }
+  .card-value.interes { color:var(--accent2); }
+  .card-sub { font-size:0.74rem; color:var(--text-muted); margin-top:5px; }
+
+  .progress-wrap { margin-top:14px; background:var(--border); border-radius:20px; height:8px; overflow:hidden; }
+  .progress-bar  { height:100%; border-radius:20px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .progress-label { display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-muted); margin-top:5px; }
+
+  /* ── Form ── */
+  .section-title { font-family:'Playfair Display',serif; font-size:1.05rem; margin-bottom:14px; }
+
+  .form-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); margin-bottom:26px;
+  }
+
+  .locked-overlay {
+    text-align:center; padding:8px 0 4px;
+    display:flex; flex-direction:column; align-items:center; gap:11px;
+    color:var(--text-muted); font-size:0.88rem;
+  }
+  .locked-overlay .icon { font-size:2rem; }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+
+  label { font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+
+  input[type="date"], input[type="number"], input[type="password"], input[type="text"] {
+    font-family:'DM Sans',sans-serif; font-size:0.95rem;
+    border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    padding:10px 13px; background:var(--surface2); color:var(--text);
+    outline:none; transition:border-color 0.2s; width:100%;
+  }
+  input:focus { border-color:var(--accent); background:#fff; }
+
+  .desglose-preview {
+    background:var(--accent-light); border-left:3px solid var(--accent);
+    border-radius:var(--radius-sm); padding:12px 14px;
+    margin-bottom:14px; font-size:0.85rem; display:none;
+  }
+  .desglose-preview.show { display:block; }
+  .desglose-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .desglose-row:last-child { margin-bottom:0; font-weight:600; }
+
+  .btn-primary {
+    width:100%; background:var(--accent); color:#fff; border:none;
+    border-radius:var(--radius-sm); padding:12px;
+    font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:600;
+    cursor:pointer; transition:background 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover  { background:#235480; }
+  .btn-primary:active { transform:scale(0.98); }
+
+  .btn-danger {
+    background:none; color:var(--danger); border:1.5px solid var(--danger);
+    border-radius:var(--radius-sm); padding:5px 11px;
+    font-family:'DM Sans',sans-serif; font-size:0.77rem;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .btn-danger:hover { background:var(--danger-light); }
+
+  /* ── Tabla ── */
+  .table-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  .table-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .badge { background:var(--accent-light); color:var(--accent); border-radius:50px; padding:3px 10px; font-size:0.73rem; font-weight:600; }
+
+  table { width:100%; border-collapse:collapse; }
+  thead th { background:var(--surface2); font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); padding:10px 13px; text-align:right; border-bottom:1px solid var(--border); }
+  thead th:first-child, thead th:nth-child(2) { text-align:left; }
+
+  tbody tr { border-bottom:1px solid var(--border); transition:background 0.15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+
+  td { padding:11px 13px; font-size:0.86rem; text-align:right; vertical-align:middle; }
+  td:first-child { text-align:left; font-family:'Playfair Display',serif; font-weight:600; color:var(--accent); }
+  td:nth-child(2){ text-align:left; color:var(--text-muted); font-size:0.79rem; }
+
+  .td-pago    { font-weight:600; }
+  .td-interes { color:var(--accent2); }
+  .td-capital { color:var(--success); }
+  .td-saldo   { font-weight:600; }
+
+  .empty-state { text-align:center; padding:48px 20px; color:var(--text-muted); }
+  .empty-state .icon { font-size:2.5rem; margin-bottom:10px; }
+  .empty-state p { font-size:0.88rem; }
+
+  /* ── Modal PIN ── */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.35);
+    backdrop-filter:blur(4px); display:flex; align-items:center;
+    justify-content:center; z-index:500;
+    opacity:0; pointer-events:none; transition:opacity 0.2s;
+  }
+  .modal-overlay.show { opacity:1; pointer-events:all; }
+
+  .modal {
+    background:var(--surface); border-radius:var(--radius);
+    padding:30px 26px 24px; width:min(340px,90vw);
+    box-shadow:var(--shadow-lg); text-align:center;
+    transform:translateY(20px);
+    transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .modal-overlay.show .modal { transform:translateY(0); }
+
+  .modal h2 { font-family:'Playfair Display',serif; font-size:1.25rem; margin-bottom:5px; }
+  .modal p  { font-size:0.82rem; color:var(--text-muted); margin-bottom:18px; }
+
+  .pin-dots { display:flex; justify-content:center; gap:10px; margin-bottom:18px; }
+  .pin-dot  { width:14px; height:14px; border-radius:50%; border:2px solid var(--border); background:transparent; transition:all 0.15s; }
+  .pin-dot.filled { background:var(--accent); border-color:var(--accent); }
+  .pin-dot.error  { background:var(--danger); border-color:var(--danger); }
+
+  .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; max-width:210px; margin:0 auto 14px; }
+
+  .pin-key {
+    background:var(--surface2); border:1.5px solid var(--border);
+    border-radius:var(--radius-sm); padding:13px;
+    font-size:1.05rem; font-weight:600; cursor:pointer;
+    transition:all 0.15s; font-family:'DM Sans',sans-serif;
+  }
+  .pin-key:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent); }
+  .pin-key.clear { color:var(--danger); font-size:0.9rem; }
+  .pin-key.ok    { background:var(--accent); color:#fff; border-color:var(--accent); font-size:0.85rem; }
+  .pin-key.ok:hover { background:#235480; }
+
+  .modal-error { color:var(--danger); font-size:0.8rem; min-height:18px; margin-top:2px; }
+  .modal-cancel { background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer; padding:6px; font-family:'DM Sans',sans-serif; text-decoration:underline; margin-top:6px; display:block; width:100%; text-align:center; }
+
+  /* ── Toast ── */
+  .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--text); color:#fff; border-radius:50px; padding:11px 22px; font-size:0.84rem; box-shadow:var(--shadow-lg); transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.35s; opacity:0; z-index:9990; white-space:nowrap; }
+  .toast.show    { transform:translateX(-50%) translateY(0); opacity:1; }
+  .toast.success { background:var(--success); }
+  .toast.error   { background:var(--danger); }
+
+  @media (max-width:480px) {
+    .card-value { font-size:1.35rem; }
+    .form-row   { grid-template-columns:1fr; }
+    thead th:nth-child(3), td:nth-child(3) { display:none; }
+    header { padding:14px 16px 12px; }
+    .login-box { padding:32px 22px 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ PANTALLA DE LOGIN ══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <h1>Control de Deuda</h1>
+    <p class="subtitle">Ingresa tus credenciales para continuar</p>
+
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" placeholder="usuario"
+             autocomplete="username"
+             onkeydown="if(event.key==='Enter') loginIntento()">
+    </div>
+
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••"
+             autocomplete="current-password"
+             onkeydown="if(event.key==='Enter') loginIntento()">
+    </div>
+
+    <div class="login-error" id="loginError">Usuario o contraseña incorrectos.</div>
+
+    <button class="btn-login" onclick="loginIntento()">Ingresar</button>
+  </div>
+</div>
+
+<!-- ══ APP PRINCIPAL ══ -->
+<div id="appScreen">
+  <header>
+    <div class="header-title">
+      <h2>Control de Deuda</h2>
+      <p>6% anual · interés sobre saldo insoluto</p>
+    </div>
+    <button class="btn-cerrar" onclick="cerrarSesion()">⏏ Salir</button>
+  </header>
+
+  <main>
+    <div class="summary-grid">
+      <div class="card card-wide">
+        <div class="card-label">Saldo pendiente</div>
+        <div class="card-value saldo" id="saldoActual">$200,000.00</div>
+        <div class="card-sub">de $200,000.00 deuda inicial · <span id="numPagos">0 pagos</span></div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+        <div class="progress-label">
+          <span id="pctLeft">0% pagado</span>
+          <span id="pctRight">$0.00 capital</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Capital pagado</div>
+        <div class="card-value capital" id="capitalTotal">$0.00</div>
+        <div class="card-sub">abono a deuda</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Interés pagado</div>
+        <div class="card-value interes" id="interesTotal">$0.00</div>
+        <div class="card-sub">costo financiero</div>
+      </div>
+    </div>
+
+    <h3 class="section-title">Registrar pago</h3>
+    <div class="form-card"><div id="formContent"></div></div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h3 class="section-title" style="margin:0">Historial de pagos</h3>
+        <span class="badge" id="tableCount">0 registros</span>
+      </div>
+      <div id="tableBody"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal PIN -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal"><div id="modalContent"></div></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ CREDENCIALES ══════════════════════════════
+const USUARIO_OK  = 'chispa';
+const PASSWORD_OK = '55555';
+const PIN_FIJO    = '5555';
+
+// ══ CONFIG DEUDA ══════════════════════════════
+const DEUDA_INICIAL = 200000;
+const TASA_MENSUAL  = 0.06 / 12;   // 0.5%
+
+const LS_PAGOS = 'deuda_pagos_v1';
+const SS_LOGIN = 'deuda_sesion_v1';
+
+// ══ ESTADO ════════════════════════════════════
+let pagos          = [];
+let capturarActivo = false;
+let pinBuffer      = '';
+
+// ══ LOGIN ═════════════════════════════════════
+function loginIntento() {
+  const u   = document.getElementById('loginUser').value.trim().toLowerCase();
+  const p   = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+
+  if (u === USUARIO_OK && p === PASSWORD_OK) {
+    sessionStorage.setItem(SS_LOGIN, '1');
+    err.classList.remove('show');
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.add('visible');
+    init();
+  } else {
+    err.classList.add('show');
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+    const box = document.querySelector('.login-box');
+    box.style.animation = 'none';
+    box.offsetHeight;
+    box.style.animation = 'shake 0.4s ease';
+  }
+}
+
+function cerrarSesion() {
+  sessionStorage.removeItem(SS_LOGIN);
+  capturarActivo = false;
+  document.getElementById('appScreen').classList.remove('visible');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').classList.remove('show');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem(SS_LOGIN) === '1') {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.add('visible');
+    init();
+  } else {
+    document.getElementById('loginUser').focus();
+  }
+});
+
+// ══ INIT ══════════════════════════════════════
+function init() {
+  const raw = localStorage.getItem(LS_PAGOS);
+  if (raw) { try { pagos = JSON.parse(raw); } catch(e) { pagos = []; } }
+  renderAll();
+  renderForm();
+}
+
+// ══ HELPERS ═══════════════════════════════════
+function fmt(n) {
+  return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function fmtFecha(s) {
+  const [y,m,d] = s.split('-');
+  const M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${parseInt(d)} ${M[parseInt(m)-1]} ${y}`;
+}
+
+function getSaldoActual() {
+  return pagos.reduce((s, p) => s - p.capital, DEUDA_INICIAL);
+}
+
+// ══ RENDER RESUMEN ════════════════════════════
+function renderResumen() {
+  const saldo    = getSaldoActual();
+  const capTotal = pagos.reduce((s, p) => s + p.capital, 0);
+  const intTotal = pagos.reduce((s, p) => s + p.interes, 0);
+  const pct      = (capTotal / DEUDA_INICIAL) * 100;
+
+  document.getElementById('saldoActual').textContent  = fmt(saldo);
+  document.getElementById('capitalTotal').textContent = fmt(capTotal);
+  document.getElementById('interesTotal').textContent = fmt(intTotal);
+  document.getElementById('progressBar').style.width  = pct.toFixed(2) + '%';
+  document.getElementById('pctLeft').textContent      = pct.toFixed(1) + '% pagado';
+  document.getElementById('pctRight').textContent     = fmt(capTotal) + ' capital';
+  document.getElementById('numPagos').textContent     = pagos.length + (pagos.length === 1 ? ' pago' : ' pagos');
+}
+
+// ══ RENDER TABLA ══════════════════════════════
+function renderTabla() {
+  const count = pagos.length;
+  document.getElementById('tableCount').textContent =
+    count + (count === 1 ? ' registro' : ' registros');
+
+  if (count === 0) {
+    document.getElementById('tableBody').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>Aún no hay pagos registrados.</p>
+      </div>`;
+    return;
+  }
+
+  const colAcc = capturarActivo ? '<th>Acción</th>' : '';
+  let html = `<table><thead><tr>
+    <th>#</th><th>Fecha</th><th>Pago</th>
+    <th>Interés</th><th>Capital</th><th>Saldo</th>${colAcc}
+  </tr></thead><tbody>`;
+
+  pagos.forEach((p, i) => {
+    const del = capturarActivo
+      ? `<td><button class="btn-danger" onclick="eliminarPago(${i})">Borrar</button></td>`
+      : '';
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${fmtFecha(p.fecha)}</td>
+      <td class="td-pago">${fmt(p.monto)}</td>
+      <td class="td-interes">${fmt(p.interes)}</td>
+      <td class="td-capital">${fmt(p.capital)}</td>
+      <td class="td-saldo">${fmt(p.saldo)}</td>
+      ${del}
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableBody').innerHTML = html;
+}
+
+function renderAll() { renderResumen(); renderTabla(); }
+
+// ══ FORM PAGO ═════════════════════════════════
+function renderForm() {
+  const fc = document.getElementById('formContent');
+
+  if (!capturarActivo) {
+    fc.innerHTML = `
+      <div class="locked-overlay">
+        <span class="icon">🔒</span>
+        <p>Ingresa el PIN de captura para habilitar el registro de pagos.</p>
+        <button class="btn-primary" style="max-width:210px" onclick="abrirPinModal()">Ingresar PIN</button>
+      </div>`;
+    return;
+  }
+
+  const hoy = new Date().toISOString().split('T')[0];
+  fc.innerHTML = `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Fecha de pago</label>
+        <input type="date" id="inputFecha" value="${hoy}" onchange="calcDesglose()">
+      </div>
+      <div class="form-group">
+        <label>Monto del pago ($)</label>
+        <input type="number" id="inputMonto" placeholder="0.00"
+               min="0.01" step="0.01" oninput="calcDesglose()">
+      </div>
+    </div>
+    <div class="desglose-preview" id="desglosePrev">
+      <div class="desglose-row">
+        <span>Interés del período (${(TASA_MENSUAL*100).toFixed(2)}%)</span>
+        <span id="dpInteres">—</span>
+      </div>
+      <div class="desglose-row">
+        <span>Abono a capital</span>
+        <span id="dpCapital">—</span>
+      </div>
+      <div class="desglose-row">
+        <span>Saldo resultante</span>
+        <span id="dpSaldo">—</span>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="registrarPago()">Registrar pago</button>`;
+}
+
+function calcDesglose() {
+  const monto = parseFloat(document.getElementById('inputMonto')?.value || 0);
+  const prev  = document.getElementById('desglosePrev');
+  if (!monto || monto <= 0) { prev.classList.remove('show'); return; }
+
+  const saldo      = getSaldoActual();
+  const interes    = saldo * TASA_MENSUAL;
+  const capital    = Math.max(0, monto - interes);
+  const nuevoSaldo = Math.max(0, saldo - capital);
+
+  document.getElementById('dpInteres').textContent = fmt(interes);
+  document.getElementById('dpCapital').textContent = fmt(capital);
+  document.getElementById('dpSaldo').textContent   = fmt(nuevoSaldo);
+  prev.classList.add('show');
+}
+
+// ══ REGISTRAR PAGO ════════════════════════════
+function registrarPago() {
+  const fecha = document.getElementById('inputFecha')?.value;
+  const monto = parseFloat(document.getElementById('inputMonto')?.value || 0);
+
+  if (!fecha) { showToast('Selecciona una fecha.', 'error'); return; }
+  if (!monto || monto <= 0) { showToast('Ingresa un monto válido.', 'error'); return; }
+
+  const saldo = getSaldoActual();
+  if (saldo <= 0) { showToast('La deuda ya está saldada.', 'error'); return; }
+
+  const interes = saldo * TASA_MENSUAL;
+  if (monto < interes) {
+    showToast(`Mínimo para cubrir intereses: ${fmt(interes)}`, 'error');
+    return;
+  }
+
+  const capital    = Math.min(monto - interes, saldo);
+  const nuevoSaldo = Math.max(0, saldo - capital);
+
+  pagos.push({ fecha, monto: interes + capital, interes, capital, saldo: nuevoSaldo });
+  guardar();
+  renderAll();
+  renderForm();
+  showToast('✓ Pago registrado', 'success');
+
+  if (nuevoSaldo === 0)
+    setTimeout(() => showToast('🎉 ¡Deuda saldada al 100%!', 'success'), 1400);
+}
+
+// ══ ELIMINAR PAGO ═════════════════════════════
+function eliminarPago(idx) {
+  if (!confirm(`¿Eliminar el pago #${idx+1}?\nLos saldos siguientes se recalcularán.`)) return;
+  pagos.splice(idx, 1);
+  recalcularSaldos();
+  guardar();
+  renderAll();
+  renderForm();
+  showToast('Pago eliminado y saldos actualizados.', 'success');
+}
+
+function recalcularSaldos() {
+  let saldo = DEUDA_INICIAL;
+  pagos.forEach(p => {
+    const interes = saldo * TASA_MENSUAL;
+    const capital = Math.min(Math.max(0, p.monto - interes), saldo);
+    p.interes = interes;
+    p.capital = capital;
+    saldo = Math.max(0, saldo - capital);
+    p.saldo = saldo;
+  });
+}
+
+function guardar() {
+  localStorage.setItem(LS_PAGOS, JSON.stringify(pagos));
+}
+
+// ══ MODAL PIN CAPTURA (fijo 5555) ═════════════
+function abrirPinModal() {
+  pinBuffer = '';
+  document.getElementById('modalContent').innerHTML = `
+    <h2>PIN de captura</h2>
+    <p>Introduce el PIN de 4 dígitos para activar el registro de pagos.</p>
+    <div class="pin-dots">
+      ${[0,1,2,3].map(i=>`<div class="pin-dot" id="dot${i}"></div>`).join('')}
+    </div>
+    <div class="pin-grid">
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" onclick="pinPress('${n}')">${n}</button>`).join('')}
+      <button class="pin-key clear" onclick="pinClear()">⌫</button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key ok" onclick="pinOK()">OK</button>
+    </div>
+    <div class="modal-error" id="modalError"></div>
+    <button class="modal-cancel" onclick="cerrarModal()">Cancelar</button>`;
+  document.getElementById('pinModal').classList.add('show');
+}
+
+function pinPress(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updateDots();
+  if (pinBuffer.length === 4) setTimeout(pinOK, 200);
+}
+
+function pinClear() {
+  pinBuffer = pinBuffer.slice(0,-1);
+  updateDots();
+}
+
+function updateDots(err=false) {
+  for (let i=0;i<4;i++) {
+    const dot = document.getElementById('dot'+i);
+    dot.classList.remove('filled','error');
+    if (err) dot.classList.add('error');
+    else if (i < pinBuffer.length) dot.classList.add('filled');
+  }
+}
+
+function pinOK() {
+  if (pinBuffer.length < 4) {
+    document.getElementById('modalError').textContent = 'El PIN debe tener 4 dígitos.';
+    return;
+  }
+  if (pinBuffer === PIN_FIJO) {
+    cerrarModal();
+    capturarActivo = true;
+    renderForm();
+    renderTabla();
+    showToast('✓ Modo captura activado', 'success');
+  } else {
+    updateDots(true);
+    document.getElementById('modalError').textContent = 'PIN incorrecto.';
+    setTimeout(() => {
+      pinBuffer = '';
+      updateDots();
+      document.getElementById('modalError').textContent = '';
+    }, 1200);
+  }
+}
+
+function cerrarModal() {
+  document.getElementById('pinModal').classList.remove('show');
+  pinBuffer = '';
+}
+
+document.getElementById('pinModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('pinModal')) cerrarModal();
+});
+
+// ══ TOAST ═════════════════════════════════════
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
