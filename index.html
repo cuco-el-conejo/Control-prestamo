@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Deuda</title>
+<meta name="theme-color" content="#2a6496">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deuda">
+<link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
@@ -733,6 +739,14 @@ function cerrarModal() {
 document.getElementById('pinModal').addEventListener('click', e => {
   if (e.target === document.getElementById('pinModal')) cerrarModal();
 });
+
+// ══ SERVICE WORKER ════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/Control-prestamo/sw.js')
+      .catch(err => console.log('SW no registrado:', err));
+  });
+}
 
 // ══ TOAST ═════════════════════════════════════
 function showToast(msg, type='') {
