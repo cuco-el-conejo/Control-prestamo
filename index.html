@@ -6,6 +6,11 @@
 <title>Control de Deuda</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
 <style>
   :root {
     --bg:           #f5f3ee;
@@ -35,31 +40,10 @@
     min-height: 100vh;
   }
 
-  /* ════ LOGIN ════ */
-  #loginScreen {
-    position: fixed; inset: 0;
-    background: linear-gradient(145deg, #e8f1f8 0%, #f5f3ee 50%, #fdf3e7 100%);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 9999; padding: 24px;
-  }
-
-  #loginScreen.hidden { display: none; }
-
-  .login-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px 32px 36px;
-    width: min(400px, 100%);
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1);
-  }
-
   @keyframes slideUp {
     from { opacity:0; transform:translateY(30px); }
     to   { opacity:1; transform:translateY(0); }
   }
-
   @keyframes shake {
     0%,100% { transform:translateX(0); }
     20%     { transform:translateX(-8px); }
@@ -67,39 +51,64 @@
     60%     { transform:translateX(-5px); }
     80%     { transform:translateX(5px); }
   }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ════ SPLASH / LOADING ════ */
+  #splashScreen {
+    position:fixed; inset:0;
+    background: linear-gradient(145deg,#e8f1f8 0%,#f5f3ee 50%,#fdf3e7 100%);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    z-index:9999; gap:16px;
+  }
+  #splashScreen.hidden { display:none; }
+  .spinner {
+    width:40px; height:40px;
+    border:3px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  .splash-text { font-size:0.85rem; color:var(--text-muted); }
+
+  /* ════ LOGIN ════ */
+  #loginScreen {
+    position:fixed; inset:0;
+    background:linear-gradient(145deg,#e8f1f8 0%,#f5f3ee 50%,#fdf3e7 100%);
+    display:flex; align-items:center; justify-content:center;
+    z-index:9998; padding:24px;
+  }
+  #loginScreen.hidden { display:none; }
+
+  .login-box {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:40px 32px 36px;
+    width:min(400px,100%); box-shadow:var(--shadow-lg);
+    animation:slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
 
   .login-icon {
-    width:56px; height:56px;
-    background:var(--accent-light);
-    border-radius:16px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:1.6rem; margin:0 auto 20px;
+    width:56px; height:56px; background:var(--accent-light);
+    border-radius:16px; display:flex; align-items:center;
+    justify-content:center; font-size:1.6rem; margin:0 auto 20px;
   }
 
   .login-box h1 {
     font-family:'Playfair Display',serif;
     font-size:1.5rem; text-align:center; margin-bottom:4px;
   }
-
-  .login-box .subtitle {
-    text-align:center; font-size:0.82rem;
-    color:var(--text-muted); margin-bottom:28px;
-  }
+  .login-box .subtitle { text-align:center; font-size:0.82rem; color:var(--text-muted); margin-bottom:28px; }
 
   .login-field { display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
-
-  .login-field label {
-    font-size:0.75rem; font-weight:600;
-    text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted);
-  }
-
+  .login-field label { font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); }
   .login-field input {
     font-family:'DM Sans',sans-serif; font-size:0.95rem;
     border:1.5px solid var(--border); border-radius:var(--radius-sm);
     padding:11px 14px; background:var(--surface2); color:var(--text);
-    outline:none; transition:border-color 0.2s, background 0.2s; width:100%;
+    outline:none; transition:border-color 0.2s; width:100%;
   }
-
   .login-field input:focus { border-color:var(--accent); background:#fff; }
 
   .login-error {
@@ -111,11 +120,10 @@
   .login-error.show { display:block; }
 
   .btn-login {
-    width:100%; background:var(--accent); color:#fff;
-    border:none; border-radius:var(--radius-sm);
-    padding:13px; font-family:'DM Sans',sans-serif;
-    font-size:0.95rem; font-weight:600;
-    cursor:pointer; transition:background 0.2s, transform 0.1s; margin-top:4px;
+    width:100%; background:var(--accent); color:#fff; border:none;
+    border-radius:var(--radius-sm); padding:13px;
+    font-family:'DM Sans',sans-serif; font-size:0.95rem; font-weight:600;
+    cursor:pointer; transition:background 0.2s,transform 0.1s; margin-top:4px;
   }
   .btn-login:hover  { background:#235480; }
   .btn-login:active { transform:scale(0.98); }
@@ -130,11 +138,19 @@
     justify-content:space-between; position:sticky; top:0; z-index:100;
     box-shadow:0 2px 8px rgba(0,0,0,0.05);
   }
+  .header-title h2 { font-family:'Playfair Display',serif; font-size:1.25rem; letter-spacing:-0.3px; }
+  .header-title p  { font-size:0.73rem; color:var(--text-muted); margin-top:2px; }
 
-  .header-title h2 {
-    font-family:'Playfair Display',serif; font-size:1.25rem; letter-spacing:-0.3px;
+  .header-right { display:flex; align-items:center; gap:8px; }
+
+  .sync-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--success); display:inline-block;
+    transition:background 0.3s;
   }
-  .header-title p { font-size:0.73rem; color:var(--text-muted); margin-top:2px; }
+  .sync-dot.offline { background:#bbb; }
+  .sync-dot.syncing { background:var(--accent2); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
   .btn-cerrar {
     background:none; border:1.5px solid var(--border); border-radius:50px;
@@ -148,40 +164,23 @@
 
   /* ── Resumen ── */
   .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
-
-  .card {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);
-  }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); }
   .card-wide { grid-column:1/-1; }
-
-  .card-label {
-    font-size:0.7rem; font-weight:600; color:var(--text-muted);
-    text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;
-  }
+  .card-label { font-size:0.7rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; }
   .card-value { font-family:'Playfair Display',serif; font-size:1.7rem; font-weight:700; line-height:1; }
   .card-value.saldo   { color:var(--accent); }
   .card-value.capital { color:var(--success); }
   .card-value.interes { color:var(--accent2); }
   .card-sub { font-size:0.74rem; color:var(--text-muted); margin-top:5px; }
-
   .progress-wrap { margin-top:14px; background:var(--border); border-radius:20px; height:8px; overflow:hidden; }
   .progress-bar  { height:100%; border-radius:20px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width 0.6s cubic-bezier(0.4,0,0.2,1); }
   .progress-label { display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-muted); margin-top:5px; }
 
   /* ── Form ── */
   .section-title { font-family:'Playfair Display',serif; font-size:1.05rem; margin-bottom:14px; }
+  .form-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); margin-bottom:26px; }
 
-  .form-card {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); margin-bottom:26px;
-  }
-
-  .locked-overlay {
-    text-align:center; padding:8px 0 4px;
-    display:flex; flex-direction:column; align-items:center; gap:11px;
-    color:var(--text-muted); font-size:0.88rem;
-  }
+  .locked-overlay { text-align:center; padding:8px 0 4px; display:flex; flex-direction:column; align-items:center; gap:11px; color:var(--text-muted); font-size:0.88rem; }
   .locked-overlay .icon { font-size:2rem; }
 
   .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
@@ -189,7 +188,7 @@
 
   label { font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
 
-  input[type="date"], input[type="number"], input[type="password"], input[type="text"] {
+  input[type="date"],input[type="number"],input[type="password"],input[type="text"] {
     font-family:'DM Sans',sans-serif; font-size:0.95rem;
     border:1.5px solid var(--border); border-radius:var(--radius-sm);
     padding:10px 13px; background:var(--surface2); color:var(--text);
@@ -197,30 +196,17 @@
   }
   input:focus { border-color:var(--accent); background:#fff; }
 
-  .desglose-preview {
-    background:var(--accent-light); border-left:3px solid var(--accent);
-    border-radius:var(--radius-sm); padding:12px 14px;
-    margin-bottom:14px; font-size:0.85rem; display:none;
-  }
+  .desglose-preview { background:var(--accent-light); border-left:3px solid var(--accent); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:14px; font-size:0.85rem; display:none; }
   .desglose-preview.show { display:block; }
   .desglose-row { display:flex; justify-content:space-between; margin-bottom:4px; }
   .desglose-row:last-child { margin-bottom:0; font-weight:600; }
 
-  .btn-primary {
-    width:100%; background:var(--accent); color:#fff; border:none;
-    border-radius:var(--radius-sm); padding:12px;
-    font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:600;
-    cursor:pointer; transition:background 0.2s, transform 0.1s;
-  }
+  .btn-primary { width:100%; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-sm); padding:12px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer; transition:background 0.2s,transform 0.1s; }
   .btn-primary:hover  { background:#235480; }
   .btn-primary:active { transform:scale(0.98); }
+  .btn-primary:disabled { background:#aaa; cursor:not-allowed; }
 
-  .btn-danger {
-    background:none; color:var(--danger); border:1.5px solid var(--danger);
-    border-radius:var(--radius-sm); padding:5px 11px;
-    font-family:'DM Sans',sans-serif; font-size:0.77rem;
-    cursor:pointer; transition:all 0.2s;
-  }
+  .btn-danger { background:none; color:var(--danger); border:1.5px solid var(--danger); border-radius:var(--radius-sm); padding:5px 11px; font-family:'DM Sans',sans-serif; font-size:0.77rem; cursor:pointer; transition:all 0.2s; }
   .btn-danger:hover { background:var(--danger-light); }
 
   /* ── Tabla ── */
@@ -230,7 +216,7 @@
 
   table { width:100%; border-collapse:collapse; }
   thead th { background:var(--surface2); font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); padding:10px 13px; text-align:right; border-bottom:1px solid var(--border); }
-  thead th:first-child, thead th:nth-child(2) { text-align:left; }
+  thead th:first-child,thead th:nth-child(2) { text-align:left; }
 
   tbody tr { border-bottom:1px solid var(--border); transition:background 0.15s; }
   tbody tr:last-child { border-bottom:none; }
@@ -239,7 +225,6 @@
   td { padding:11px 13px; font-size:0.86rem; text-align:right; vertical-align:middle; }
   td:first-child { text-align:left; font-family:'Playfair Display',serif; font-weight:600; color:var(--accent); }
   td:nth-child(2){ text-align:left; color:var(--text-muted); font-size:0.79rem; }
-
   .td-pago    { font-weight:600; }
   .td-interes { color:var(--accent2); }
   .td-capital { color:var(--success); }
@@ -250,23 +235,10 @@
   .empty-state p { font-size:0.88rem; }
 
   /* ── Modal PIN ── */
-  .modal-overlay {
-    position:fixed; inset:0; background:rgba(0,0,0,0.35);
-    backdrop-filter:blur(4px); display:flex; align-items:center;
-    justify-content:center; z-index:500;
-    opacity:0; pointer-events:none; transition:opacity 0.2s;
-  }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.35); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:500; opacity:0; pointer-events:none; transition:opacity 0.2s; }
   .modal-overlay.show { opacity:1; pointer-events:all; }
-
-  .modal {
-    background:var(--surface); border-radius:var(--radius);
-    padding:30px 26px 24px; width:min(340px,90vw);
-    box-shadow:var(--shadow-lg); text-align:center;
-    transform:translateY(20px);
-    transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  }
+  .modal { background:var(--surface); border-radius:var(--radius); padding:30px 26px 24px; width:min(340px,90vw); box-shadow:var(--shadow-lg); text-align:center; transform:translateY(20px); transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
   .modal-overlay.show .modal { transform:translateY(0); }
-
   .modal h2 { font-family:'Playfair Display',serif; font-size:1.25rem; margin-bottom:5px; }
   .modal p  { font-size:0.82rem; color:var(--text-muted); margin-bottom:18px; }
 
@@ -276,19 +248,13 @@
   .pin-dot.error  { background:var(--danger); border-color:var(--danger); }
 
   .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; max-width:210px; margin:0 auto 14px; }
-
-  .pin-key {
-    background:var(--surface2); border:1.5px solid var(--border);
-    border-radius:var(--radius-sm); padding:13px;
-    font-size:1.05rem; font-weight:600; cursor:pointer;
-    transition:all 0.15s; font-family:'DM Sans',sans-serif;
-  }
+  .pin-key { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:13px; font-size:1.05rem; font-weight:600; cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
   .pin-key:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent); }
   .pin-key.clear { color:var(--danger); font-size:0.9rem; }
   .pin-key.ok    { background:var(--accent); color:#fff; border-color:var(--accent); font-size:0.85rem; }
   .pin-key.ok:hover { background:#235480; }
 
-  .modal-error { color:var(--danger); font-size:0.8rem; min-height:18px; margin-top:2px; }
+  .modal-error  { color:var(--danger); font-size:0.8rem; min-height:18px; margin-top:2px; }
   .modal-cancel { background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer; padding:6px; font-family:'DM Sans',sans-serif; text-decoration:underline; margin-top:6px; display:block; width:100%; text-align:center; }
 
   /* ── Toast ── */
@@ -300,7 +266,7 @@
   @media (max-width:480px) {
     .card-value { font-size:1.35rem; }
     .form-row   { grid-template-columns:1fr; }
-    thead th:nth-child(3), td:nth-child(3) { display:none; }
+    thead th:nth-child(3),td:nth-child(3) { display:none; }
     header { padding:14px 16px 12px; }
     .login-box { padding:32px 22px 28px; }
   }
@@ -308,41 +274,44 @@
 </head>
 <body>
 
-<!-- ══ PANTALLA DE LOGIN ══ -->
-<div id="loginScreen">
+<!-- SPLASH -->
+<div id="splashScreen">
+  <div class="spinner"></div>
+  <span class="splash-text">Conectando...</span>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="hidden">
   <div class="login-box">
     <div class="login-icon">🔐</div>
     <h1>Control de Deuda</h1>
     <p class="subtitle">Ingresa tus credenciales para continuar</p>
-
     <div class="login-field">
       <label>Usuario</label>
-      <input type="text" id="loginUser" placeholder="usuario"
-             autocomplete="username"
+      <input type="text" id="loginUser" placeholder="usuario" autocomplete="username"
              onkeydown="if(event.key==='Enter') loginIntento()">
     </div>
-
     <div class="login-field">
       <label>Contraseña</label>
-      <input type="password" id="loginPass" placeholder="••••••"
-             autocomplete="current-password"
+      <input type="password" id="loginPass" placeholder="••••••" autocomplete="current-password"
              onkeydown="if(event.key==='Enter') loginIntento()">
     </div>
-
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos.</div>
-
     <button class="btn-login" onclick="loginIntento()">Ingresar</button>
   </div>
 </div>
 
-<!-- ══ APP PRINCIPAL ══ -->
+<!-- APP -->
 <div id="appScreen">
   <header>
     <div class="header-title">
       <h2>Control de Deuda</h2>
       <p>6% anual · interés sobre saldo insoluto</p>
     </div>
-    <button class="btn-cerrar" onclick="cerrarSesion()">⏏ Salir</button>
+    <div class="header-right">
+      <span class="sync-dot" id="syncDot" title="Sincronizado"></span>
+      <button class="btn-cerrar" onclick="cerrarSesion()">⏏ Salir</button>
+    </div>
   </header>
 
   <main>
@@ -398,15 +367,43 @@ const PIN_FIJO    = '5555';
 
 // ══ CONFIG DEUDA ══════════════════════════════
 const DEUDA_INICIAL = 200000;
-const TASA_MENSUAL  = 0.06 / 12;   // 0.5%
+const TASA_MENSUAL  = 0.06 / 12;
 
-const LS_PAGOS = 'deuda_pagos_v1';
 const SS_LOGIN = 'deuda_sesion_v1';
+
+// ══ FIREBASE ══════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyD4MGR9E_N18IoB01efBBtDrpNW5ZJsk2g",
+  authDomain:        "control-prestamo.firebaseapp.com",
+  projectId:         "control-prestamo",
+  storageBucket:     "control-prestamo.firebasestorage.app",
+  messagingSenderId: "190946204699",
+  appId:             "1:190946204699:web:613daf717c484a83812cbe"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const pagosRef = db.collection('pagos');
 
 // ══ ESTADO ════════════════════════════════════
 let pagos          = [];
 let capturarActivo = false;
 let pinBuffer      = '';
+let unsubscribe    = null;
+
+// ══ INIT ══════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Mostrar splash brevemente mientras carga Firebase
+  setTimeout(() => {
+    document.getElementById('splashScreen').classList.add('hidden');
+    if (sessionStorage.getItem(SS_LOGIN) === '1') {
+      mostrarApp();
+    } else {
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('loginUser').focus();
+    }
+  }, 1200);
+});
 
 // ══ LOGIN ═════════════════════════════════════
 function loginIntento() {
@@ -418,8 +415,7 @@ function loginIntento() {
     sessionStorage.setItem(SS_LOGIN, '1');
     err.classList.remove('show');
     document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('appScreen').classList.add('visible');
-    init();
+    mostrarApp();
   } else {
     err.classList.add('show');
     document.getElementById('loginPass').value = '';
@@ -431,32 +427,48 @@ function loginIntento() {
   }
 }
 
+function mostrarApp() {
+  document.getElementById('appScreen').classList.add('visible');
+  renderForm();
+  escucharPagos();
+}
+
 function cerrarSesion() {
   sessionStorage.removeItem(SS_LOGIN);
   capturarActivo = false;
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
   document.getElementById('appScreen').classList.remove('visible');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPass').value = '';
   document.getElementById('loginError').classList.remove('show');
+  pagos = [];
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem(SS_LOGIN) === '1') {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('appScreen').classList.add('visible');
-    init();
-  } else {
-    document.getElementById('loginUser').focus();
-  }
-});
+// ══ FIRESTORE: ESCUCHA EN TIEMPO REAL ═════════
+function escucharPagos() {
+  setSyncDot('syncing');
 
-// ══ INIT ══════════════════════════════════════
-function init() {
-  const raw = localStorage.getItem(LS_PAGOS);
-  if (raw) { try { pagos = JSON.parse(raw); } catch(e) { pagos = []; } }
-  renderAll();
-  renderForm();
+  unsubscribe = pagosRef
+    .orderBy('orden', 'asc')
+    .onSnapshot(snapshot => {
+      pagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderAll();
+      renderForm();
+      setSyncDot('online');
+    }, error => {
+      console.error('Firestore error:', error);
+      setSyncDot('offline');
+      showToast('Error de conexión. Verificando red...', 'error');
+    });
+}
+
+function setSyncDot(state) {
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sync-dot';
+  if (state === 'offline') { dot.classList.add('offline'); dot.title = 'Sin conexión'; }
+  else if (state === 'syncing') { dot.classList.add('syncing'); dot.title = 'Sincronizando...'; }
+  else { dot.title = 'Sincronizado en tiempo real'; }
 }
 
 // ══ HELPERS ═══════════════════════════════════
@@ -493,8 +505,7 @@ function renderResumen() {
 // ══ RENDER TABLA ══════════════════════════════
 function renderTabla() {
   const count = pagos.length;
-  document.getElementById('tableCount').textContent =
-    count + (count === 1 ? ' registro' : ' registros');
+  document.getElementById('tableCount').textContent = count + (count === 1 ? ' registro' : ' registros');
 
   if (count === 0) {
     document.getElementById('tableBody').innerHTML = `
@@ -513,7 +524,7 @@ function renderTabla() {
 
   pagos.forEach((p, i) => {
     const del = capturarActivo
-      ? `<td><button class="btn-danger" onclick="eliminarPago(${i})">Borrar</button></td>`
+      ? `<td><button class="btn-danger" onclick="eliminarPago('${p.id}',${i})">Borrar</button></td>`
       : '';
     html += `<tr>
       <td>${i+1}</td>
@@ -535,12 +546,13 @@ function renderAll() { renderResumen(); renderTabla(); }
 // ══ FORM PAGO ═════════════════════════════════
 function renderForm() {
   const fc = document.getElementById('formContent');
+  if (!fc) return;
 
   if (!capturarActivo) {
     fc.innerHTML = `
       <div class="locked-overlay">
         <span class="icon">🔒</span>
-        <p>Ingresa el PIN de captura para habilitar el registro de pagos.</p>
+        <p>Ingresa el PIN de captura para habilitar el registro.</p>
         <button class="btn-primary" style="max-width:210px" onclick="abrirPinModal()">Ingresar PIN</button>
       </div>`;
     return;
@@ -555,25 +567,15 @@ function renderForm() {
       </div>
       <div class="form-group">
         <label>Monto del pago ($)</label>
-        <input type="number" id="inputMonto" placeholder="0.00"
-               min="0.01" step="0.01" oninput="calcDesglose()">
+        <input type="number" id="inputMonto" placeholder="0.00" min="0.01" step="0.01" oninput="calcDesglose()">
       </div>
     </div>
     <div class="desglose-preview" id="desglosePrev">
-      <div class="desglose-row">
-        <span>Interés del período (${(TASA_MENSUAL*100).toFixed(2)}%)</span>
-        <span id="dpInteres">—</span>
-      </div>
-      <div class="desglose-row">
-        <span>Abono a capital</span>
-        <span id="dpCapital">—</span>
-      </div>
-      <div class="desglose-row">
-        <span>Saldo resultante</span>
-        <span id="dpSaldo">—</span>
-      </div>
+      <div class="desglose-row"><span>Interés del período (${(TASA_MENSUAL*100).toFixed(2)}%)</span><span id="dpInteres">—</span></div>
+      <div class="desglose-row"><span>Abono a capital</span><span id="dpCapital">—</span></div>
+      <div class="desglose-row"><span>Saldo resultante</span><span id="dpSaldo">—</span></div>
     </div>
-    <button class="btn-primary" onclick="registrarPago()">Registrar pago</button>`;
+    <button class="btn-primary" id="btnRegistrar" onclick="registrarPago()">Registrar pago</button>`;
 }
 
 function calcDesglose() {
@@ -592,8 +594,8 @@ function calcDesglose() {
   prev.classList.add('show');
 }
 
-// ══ REGISTRAR PAGO ════════════════════════════
-function registrarPago() {
+// ══ REGISTRAR PAGO (Firestore) ════════════════
+async function registrarPago() {
   const fecha = document.getElementById('inputFecha')?.value;
   const monto = parseFloat(document.getElementById('inputMonto')?.value || 0);
 
@@ -612,49 +614,67 @@ function registrarPago() {
   const capital    = Math.min(monto - interes, saldo);
   const nuevoSaldo = Math.max(0, saldo - capital);
 
-  pagos.push({ fecha, monto: interes + capital, interes, capital, saldo: nuevoSaldo });
-  guardar();
-  renderAll();
-  renderForm();
-  showToast('✓ Pago registrado', 'success');
+  const btn = document.getElementById('btnRegistrar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
-  if (nuevoSaldo === 0)
-    setTimeout(() => showToast('🎉 ¡Deuda saldada al 100%!', 'success'), 1400);
+  try {
+    setSyncDot('syncing');
+    await pagosRef.add({
+      fecha,
+      monto:   interes + capital,
+      interes,
+      capital,
+      saldo:   nuevoSaldo,
+      orden:   firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('✓ Pago registrado', 'success');
+    if (nuevoSaldo === 0)
+      setTimeout(() => showToast('🎉 ¡Deuda saldada al 100%!', 'success'), 1400);
+  } catch(e) {
+    showToast('Error al guardar. Verifica tu conexión.', 'error');
+    setSyncDot('offline');
+    if (btn) { btn.disabled = false; btn.textContent = 'Registrar pago'; }
+  }
 }
 
-// ══ ELIMINAR PAGO ═════════════════════════════
-function eliminarPago(idx) {
-  if (!confirm(`¿Eliminar el pago #${idx+1}?\nLos saldos siguientes se recalcularán.`)) return;
-  pagos.splice(idx, 1);
-  recalcularSaldos();
-  guardar();
-  renderAll();
-  renderForm();
-  showToast('Pago eliminado y saldos actualizados.', 'success');
+// ══ ELIMINAR PAGO (Firestore) ═════════════════
+async function eliminarPago(docId, idx) {
+  if (!confirm(`¿Eliminar el pago #${idx+1}?\nSe recalcularán los saldos de todos los pagos.`)) return;
+
+  try {
+    setSyncDot('syncing');
+
+    // Eliminar el documento
+    await pagosRef.doc(docId).delete();
+
+    // Recalcular y actualizar todos los pagos restantes
+    // (onSnapshot se actualiza solo, pero necesitamos recalcular saldos)
+    const snapshot = await pagosRef.orderBy('orden','asc').get();
+    let saldo = DEUDA_INICIAL;
+    const batch = db.batch();
+
+    snapshot.docs.forEach(doc => {
+      const p = doc.data();
+      const interes = saldo * TASA_MENSUAL;
+      const capital = Math.min(Math.max(0, p.monto - interes), saldo);
+      saldo = Math.max(0, saldo - capital);
+      batch.update(doc.ref, { interes, capital, saldo });
+    });
+
+    await batch.commit();
+    showToast('Pago eliminado y saldos actualizados.', 'success');
+  } catch(e) {
+    showToast('Error al eliminar. Verifica tu conexión.', 'error');
+    setSyncDot('offline');
+  }
 }
 
-function recalcularSaldos() {
-  let saldo = DEUDA_INICIAL;
-  pagos.forEach(p => {
-    const interes = saldo * TASA_MENSUAL;
-    const capital = Math.min(Math.max(0, p.monto - interes), saldo);
-    p.interes = interes;
-    p.capital = capital;
-    saldo = Math.max(0, saldo - capital);
-    p.saldo = saldo;
-  });
-}
-
-function guardar() {
-  localStorage.setItem(LS_PAGOS, JSON.stringify(pagos));
-}
-
-// ══ MODAL PIN CAPTURA (fijo 5555) ═════════════
+// ══ MODAL PIN ═════════════════════════════════
 function abrirPinModal() {
   pinBuffer = '';
   document.getElementById('modalContent').innerHTML = `
     <h2>PIN de captura</h2>
-    <p>Introduce el PIN de 4 dígitos para activar el registro de pagos.</p>
+    <p>Introduce el PIN de 4 dígitos para activar el registro.</p>
     <div class="pin-dots">
       ${[0,1,2,3].map(i=>`<div class="pin-dot" id="dot${i}"></div>`).join('')}
     </div>
@@ -676,10 +696,7 @@ function pinPress(d) {
   if (pinBuffer.length === 4) setTimeout(pinOK, 200);
 }
 
-function pinClear() {
-  pinBuffer = pinBuffer.slice(0,-1);
-  updateDots();
-}
+function pinClear() { pinBuffer = pinBuffer.slice(0,-1); updateDots(); }
 
 function updateDots(err=false) {
   for (let i=0;i<4;i++) {
@@ -704,11 +721,7 @@ function pinOK() {
   } else {
     updateDots(true);
     document.getElementById('modalError').textContent = 'PIN incorrecto.';
-    setTimeout(() => {
-      pinBuffer = '';
-      updateDots();
-      document.getElementById('modalError').textContent = '';
-    }, 1200);
+    setTimeout(() => { pinBuffer=''; updateDots(); document.getElementById('modalError').textContent=''; }, 1200);
   }
 }
 
