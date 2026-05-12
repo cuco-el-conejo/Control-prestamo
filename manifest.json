@@ -1,0 +1,18 @@
+{
+  "name": "Control de Deuda",
+  "short_name": "Deuda",
+  "description": "Control de pagos y saldo de préstamo",
+  "start_url": "/Control-prestamo/",
+  "scope": "/Control-prestamo/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f3ee",
+  "theme_color": "#2a6496",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/googlei18n/noto-emoji/master/png/128/emoji_u1f4b0.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    }
+  ]
+}
